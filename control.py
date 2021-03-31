@@ -7,6 +7,8 @@ import time
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
+from datetime import datetime
+import numpy as np
 
 
 class ca:
@@ -44,12 +46,11 @@ class ca:
         check = Popen(["cainfo", pv], stdout=PIPE, stderr=PIPE)
         check_stdout, check_stderr = check.communicate()
         if check_stdout.split()[11].decode("ascii") == "DBF_CHAR":
-            a = Popen(["caput", "-S", pv, str(new_val)], stdout=PIPE, stderr=PIPE)
+            a = Popen(["caput", "-S", pv, str(new_val)], stdout=PIPE, stderr=PIPE3)
             a_stdout, a_stderr = a.communicate()
         else:
             a = Popen(["caput", pv, str(new_val)], stdout=PIPE, stderr=PIPE)
             a_stdout, a_stderr = a.communicate()
-
 
 class control:
     def __init__(self):
@@ -63,8 +64,18 @@ class control:
 
 
 if __name__ == "__main__":
+    # get date and time of run
+    dt = datetime.now()
+    print(
+        "Starting beam profile scan at",
+        dt.strftime("%H:%M:%s"),
+        "on",
+        dt.strftime("%d/%m/%y"),
+    )
+    dt = dt.strftime("%y%m%d_%H%M")
+
     # store all current values to return to at the end
-    d2_position_static = ca.caget(pv.d2_filter1value)
+    d2_y_static = ca.caget(pv.d2_y)
     x_size_static = ca.caget(pv.s3_xsize + ".RBV")
     y_size_static = ca.caget(pv.s3_ysize + ".RBV")
     x_centre_static = ca.caget(pv.s3_xcentre + ".RBV")
@@ -72,43 +83,99 @@ if __name__ == "__main__":
 
     # set x size, y size and move d2 diode in
     ca.caput(pv.s3_xsize, 0.1)
+    print("trying to move")
+    wait = ca.caget(pv.s3_xsize + ".RBV")
+    while float(0.100) != float(wait):
+        print("Setting S3 X size... currently", wait)
+        time.sleep(0.5)
+        wait = ca.caget(pv.s3_xsize + ".RBV")
+    else:
+        pass
     ca.caput(pv.s3_ysize, 0.1)
-    ca.caput(pv.d2_filter1value, pv.d2_filter_positioner.get("diode 1"))
+    wait = ca.caget(pv.s3_ysize + ".RBV")
+    while float(0.1) != float(wait):
+        print("Setting S3 Y size...")
+        time.sleep(0.5)
+        wait = ca.caget(pv.s3_ysize + ".RBV")
+    else:
+        pass
+    ca.caput(pv.d2_y, str(pv.d2_position.get("diode 1")))
+    wait = ca.caget(pv.d2_y + ".RBV")
+    while float(pv.d2_position.get("diode 1")) != float(wait):
+        print("Returning D2 Y to start value")
+        time.sleep(0.5)
+        wait = ca.caget(pv.d2_y + ".RBV")
+    else:
+        pass
 
     # move to each x, y value and record d2 current
     x_y_d2cur = []
-    for y in range(-1, 2, 1):
-        ca.caput(pv.s3_ycentre, y)
+    for y in np.around(np.linspace(-1, 1, 21, endpoint=True), 2):
+        ca.caput(pv.s3_ycentre, str(y))
         y_aim = ca.caget(pv.s3_ycentre + ".RBV")
-        while float(x_aim) != float(y):
-            print("Moving Y centre...")
-            time.sleep(2)
+        while float(y_aim) != float(y):
+            print("Moving Y centre to", y, "currently at", y_aim)
+            time.sleep(0.5)
             y_aim = float(ca.caget(pv.s3_ycentre + ".RBV"))
         else:
-            print("Y in place")
+            print("Y at", y)
             pass
-        for x in range(-1, 2, 1):
-            ca.caput(pv.s3_xcentre, x)
+        for x in np.around(np.linspace(-1, 1, 21, endpoint=True), 2):
+            ca.caput(pv.s3_xcentre, str(x))
             x_aim = ca.caget(pv.s3_xcentre + ".RBV")
             while float(x_aim) != float(x):
                 print("Moving X centre...")
-                time.sleep(2)
+                time.sleep(0.5)
                 x_aim = float(ca.caget(pv.s3_xcentre + ".RBV"))
             else:
-                print("X in place, reading D2 current...")
-                d2c2 = ca.caget(pv.d2_cur_2)
-                x_y_d2cur.append([(x, y, d2c2)])
-                print(str(d2c2))
+                print("X at", x, ", reading D2 current...")
+                d2c = ca.caget(pv.d2_cur_1)
+                x_y_d2cur.append((x, y, d2c))
+                print(str(d2c))
                 pass
 
     # return to beginning values
     ca.caput(pv.s3_xsize, x_size_static)
+    wait = ca.caget(pv.s3_xsize + ".RBV")
+    while float(x_size_static) != float(wait):
+        print("Returning S3 X size to start value")
+        time.sleep(0.5)
+    else:
+        pass
     ca.caput(pv.s3_ysize, y_size_static)
+    wait = ca.caget(pv.s3_ysize + ".RBV")
+    while float(y_size_static) != float(wait):
+        print("Returning S3 Y size to start value")
+        time.sleep(0.5)
+    else:
+        pass
     ca.caput(pv.s3_xcentre, x_centre_static)
+    wait = ca.caget(pv.s3_xcentre + ".RBV")
+    while float(x_centre_static) != float(wait):
+        print("Returning S3 X centre to start value")
+        time.sleep(0.5)
+    else:
+        pass
     ca.caput(pv.s3_ycentre, y_centre_static)
-    ca.caput(pv.d2_filter1value, d2_position_static)
+    wait = ca.caget(pv.s3_ycentre + ".RBV")
+    while float(y_centre_static) != float(wait):
+        print("Returning S3 Y centre to start value")
+        time.sleep(0.5)
+    else:
+        pass
+    ca.caput(pv.d2_y, d2_y_static)
+    wait = ca.caget(pv.d2_y + ".RBV")
+    while float(d2_y_static) != float(wait):
+        print("Returning D2 Y to start value")
+        time.sleep(0.5)
+    else:
+        pass
 
+    # generate heatmap of beam
     df = pd.DataFrame(x_y_d2cur, columns=("X", "Y", "D2"))
-    df = df.pivot('X', 'Y', 'D2')
-    sns.heatmap(df, cmap='RdBu')
+    df.to_json(dt + ".json")
+    df.to_csv(dt + ".csv")
+    df = df.pivot("X", "Y", "D2")
+    beam_profile = sns.heatmap(df, cmap="coolwarm")
+    #beam_profile.figure.savefig(dt, ".png")
     plt.show()
