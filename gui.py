@@ -24,7 +24,7 @@ def get_input():
     print("y high:", str(y_high_gui_val))
     y_point_gui_val = float(y_point_entry.get())
     print("y point:", str(y_point_gui_val))
-    
+
 
 # frames
 sizes_frame = tk.LabelFrame(master=window, text="X Y Size", borderwidth=5)

@@ -52,6 +52,7 @@ class ca:
             a = Popen(["caput", pv, str(new_val)], stdout=PIPE, stderr=PIPE)
             a_stdout, a_stderr = a.communicate()
 
+
 class control:
     def __init__(self):
         print("V0.1")
@@ -106,7 +107,9 @@ if __name__ == "__main__":
     ca.caput(pv.d2_y, str(pv.d2_position.get("diode 1")))
     wait = ca.caget(pv.d2_y + ".RBV")
     while float(pv.d2_position.get("diode 1")) != float(wait):
-        print("Moving D2 to", pv.d2_position.get("diode 1"), "- currently", wait, end="\r")
+        print(
+            "Moving D2 to", pv.d2_position.get("diode 1"), "- currently", wait, end="\r"
+        )
         time.sleep(0.5)
         wait = ca.caget(pv.d2_y + ".RBV")
     else:
@@ -193,5 +196,5 @@ if __name__ == "__main__":
     df.to_csv(dt + ".csv")
     df = df.pivot("X", "Y", "D2")
     beam_profile = sns.heatmap(df, cmap="coolwarm")
-    #beam_profile.figure.savefig(dt, ".png")
+    # beam_profile.figure.savefig(dt, ".png")
     plt.show()
