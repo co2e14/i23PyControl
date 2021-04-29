@@ -42,11 +42,6 @@ seed(3234)
 x_y_d2cur = []
 for y in np.around(np.linspace(-1, 2, 20, endpoint=True), 3):
     print("moving y to", y)
-    #time.sleep(2)
-    y_aim = yappend
-    else:
-        print("Y in place")
-        pass
     for x in np.around(np.linspace(-1, 2, 21, endpoint=True), 3):
         print("moving x to", x)
         #time.sleep(2)
@@ -67,5 +62,6 @@ df.to_csv("now" + ".csv")
 df = df.pivot("X", "Y", "D2")
 print(df)
 beam_profile = sns.heatmap(df, cmap="coolwarm")
-#beam_profile.figure.savefig(("now", ".png"))
+fig = beam_profile.get_figure()
+fig.savefig(("now.png"))
 plt.show()

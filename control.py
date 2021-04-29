@@ -186,7 +186,7 @@ if __name__ == "__main__":
         time.sleep(0.5)
         wait = ca.caget(pv.d2_y + ".RBV")
     else:
-        print("\nFinished movingD2 back to", d2_y_static, end="\n")
+        print("\nFinished moving D2 back to", d2_y_static, end="\n")
         pass
 
     # generate heatmap of beam
