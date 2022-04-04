@@ -60,6 +60,7 @@ x_y_step_frame = tk.LabelFrame(
     master=window, text="X Y limits and steps", borderwidth=5
 )
 plot_frame = tk.LabelFrame(master=window, text="Plot", borderwidth=5)
+button_frame = tk.Frame(master=window, borderwidth=5)
 
 # labels
 x_size_label = tk.Label(master=sizes_frame, text="X Size").grid(row=1, column=1)
@@ -110,6 +111,10 @@ for (text, value) in d2_position.items():
         indicator=0,
         background="light blue",
     ).pack(ipady=5, fill="both")
+    
+# buttons    
+tk.Button(master=button_frame, text="Run", command=get_input).grid(row=1, column=1)
+tk.Button(master=button_frame, text="Exit", command=window.destroy).grid(row=1, column=2)
 
 # frame positions
 sizes_frame.grid(row=1, column=1)
@@ -120,7 +125,7 @@ x_y_step_frame.grid(row=5, column=1)
 ttk.Separator(master=window).grid(row=6, column=1, pady=10, sticky="ew")
 plot_frame.grid(row=7, column=1)
 ttk.Separator(master=window).grid(row=8, column=1, pady=10, sticky="ew")
-tk.Button(master=window, text="Run", command=get_input).grid(row=9, column=1)
+button_frame.grid(row=9, column=1)
 
 
 window.mainloop()

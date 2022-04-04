@@ -1,9 +1,12 @@
-#!/usr/bin/env /dls_sw/i23/scripts/ctrl_conda/bin/python
+#!/usr/bin/env /dls/science/groups/i23/pyenvs/ctrl_conda/bin/python
 from PyQt5 import QtCore, QtGui, QtWidgets
 from oneshot import oneshot
+import os
 import pv
+import datetime
+import time
 import numpy as np
-
+from control import ca
 
 class Ui_mainwindow(object):
     def setupUi(self, mainwindow):
@@ -188,7 +191,7 @@ class Ui_mainwindow(object):
         self.gridLayout.addWidget(self.input_filename, 1, 1, 1, 1)
         self.exposure = QtWidgets.QDoubleSpinBox(self.gridLayoutWidget)
         self.exposure.setMinimum(0.01)
-        self.exposure.setMaximum(15.0)
+        self.exposure.setMaximum(200.0)
         self.exposure.setSingleStep(0.1)
         self.exposure.setProperty("value", 0.1)
         self.exposure.setObjectName("exposure")
@@ -234,12 +237,12 @@ class Ui_mainwindow(object):
         self.button_run.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.button_run.setObjectName("button_run")
         self.horizontalLayout.addWidget(self.button_run)
-        self.button_reset = QtWidgets.QPushButton(self.horizontalLayoutWidget)
-        ###### RESET BUTTON ######
-        self.button_reset.clicked.connect(self.reset)
-        self.button_reset.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.button_reset.setObjectName("button_reset")
-        self.horizontalLayout.addWidget(self.button_reset)
+        self.button_update = QtWidgets.QPushButton(self.horizontalLayoutWidget)
+        ###### UPDATE BUTTON ######
+        self.button_update.clicked.connect(self.update)
+        self.button_update.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.button_update.setObjectName("button_update")
+        self.horizontalLayout.addWidget(self.button_update)
         self.button_exit = QtWidgets.QPushButton(self.horizontalLayoutWidget)
         ###### EXIT BUTTON ######
         self.button_exit.clicked.connect(self.exit)
@@ -249,13 +252,34 @@ class Ui_mainwindow(object):
         self.button_exit.setFlat(False)
         self.button_exit.setObjectName("button_exit")
         self.horizontalLayout.addWidget(self.button_exit)
-        self.textBrowser = QtWidgets.QTextBrowser(self.centralwidget)
-        self.textBrowser.setGeometry(QtCore.QRect(10, 420, 501, 131))
-        self.textBrowser.viewport().setProperty(
-            "cursor", QtGui.QCursor(QtCore.Qt.IBeamCursor)
-        )
-        self.textBrowser.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
-        self.textBrowser.setObjectName("textBrowser")
+        self.horizontalLayoutWidgetgisaxsbs = QtWidgets.QWidget(self.centralwidget)
+        self.horizontalLayoutWidgetgisaxsbs.setGeometry(QtCore.QRect(10, 365, 501, 131))
+        self.horizontalLayoutWidgetgisaxsbs.setObjectName("horizontalLayoutWidgetgisaxsbs")
+        self.gisaxshbox = QtWidgets.QHBoxLayout(self.horizontalLayoutWidgetgisaxsbs)
+        self.gisaxshbox.setContentsMargins(0, 0, 0, 0)
+        self.gisaxshbox.setObjectName("gisaxshbox")
+        self.gisaxs_bs_x_lab = QtWidgets.QLabel(self.horizontalLayoutWidgetgisaxsbs)
+        self.gisaxs_bs_x_lab.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.gisaxs_bs_x_lab.setObjectName("gisaxs_bs_x_lab")
+        self.gisaxshbox.addWidget(self.gisaxs_bs_x_lab)
+        self.set_gisaxs_x = QtWidgets.QLineEdit(self.horizontalLayoutWidgetgisaxsbs)
+        self.set_gisaxs_x.setText("")
+        self.set_gisaxs_x.setObjectName("set_gisaxs_x")
+        self.gisaxshbox.addWidget(self.set_gisaxs_x)
+        self.gisaxs_bs_x_rbv = QtWidgets.QLabel(self.horizontalLayoutWidgetgisaxsbs)
+        self.gisaxs_bs_x_rbv.setObjectName("gisaxs_bs_x_rbv")
+        self.gisaxshbox.addWidget(self.gisaxs_bs_x_rbv)
+        self.gisaxs_bs_y_lab = QtWidgets.QLabel(self.horizontalLayoutWidgetgisaxsbs)
+        self.gisaxs_bs_y_lab.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.gisaxs_bs_y_lab.setObjectName("gisaxs_bs_y_lab")
+        self.gisaxshbox.addWidget(self.gisaxs_bs_y_lab)
+        self.set_gisaxs_y = QtWidgets.QLineEdit(self.horizontalLayoutWidgetgisaxsbs)
+        self.set_gisaxs_y.setText("")
+        self.set_gisaxs_y.setObjectName("set_gisaxs_y")
+        self.gisaxshbox.addWidget(self.set_gisaxs_y)
+        self.gisaxs_bs_y_rbv = QtWidgets.QLabel(self.horizontalLayoutWidgetgisaxsbs)
+        self.gisaxs_bs_y_rbv.setObjectName("gisaxs_bs_y_rbv")
+        self.gisaxshbox.addWidget(self.gisaxs_bs_y_rbv)
         self.horizontalLayoutWidget_3 = QtWidgets.QWidget(self.centralwidget)
         self.horizontalLayoutWidget_3.setGeometry(QtCore.QRect(10, 230, 551, 50))
         self.horizontalLayoutWidget_3.setObjectName("horizontalLayoutWidget_3")
@@ -336,6 +360,10 @@ class Ui_mainwindow(object):
         self.statusbar = QtWidgets.QStatusBar(mainwindow)
         self.statusbar.setCursor(QtGui.QCursor(QtCore.Qt.ArrowCursor))
         self.statusbar.setObjectName("statusbar")
+        self.qTimer_updater = QtCore.QTimer()
+        self.qTimer_updater.setInterval(1000)
+        self.qTimer_updater.timeout.connect(self.updateValues)
+        self.qTimer_updater.start()
         mainwindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(mainwindow)
@@ -365,9 +393,27 @@ class Ui_mainwindow(object):
         self.lab_energy_gap.setText(_translate("mainwindow", "Gap: "))
         self.tickbox_energy_scan.setText(_translate("mainwindow", "Energy Scan"))
         self.button_run.setText(_translate("mainwindow", "Run"))
-        self.button_reset.setText(_translate("mainwindow", "Reset"))
+        self.button_update.setText(_translate("mainwindow", "Update"))
         self.button_exit.setText(_translate("mainwindow", "Exit"))
+        self.gisaxs_bs_x_lab.setText(_translate("mainwindow", "GISAXS BS X"))
+        self.gisaxs_bs_x_rbv.setText(_translate("mainwindow", "x is"))
+        self.gisaxs_bs_y_lab.setText(_translate("mainwindow", "GISAXS BS Y"))
+        self.gisaxs_bs_y_rbv.setText(_translate("mainwindow", "y is"))
+        self.blx_rbv = str(ca.caget(pv.senv_blx_rbv))
+        self.bly_rbv = str(ca.caget(pv.senv_bly_rbv))
+        self.gisaxs_bs_x_rbv.setText(self.blx_rbv)
+        self.gisaxs_bs_y_rbv.setText(self.bly_rbv)
 
+    def uniquify(self, path):
+        filename, extension = os.path.splitext(path)
+        counter = 1
+        while os.path.exists(path):
+            path = filename + " (" + str(counter) + ")" + extension
+            counter += 1
+            
+        filename, _ = os.path.splitext(path)
+        return filename
+    
     def run(self):
         if self.detectordist_out.isChecked():
             detectordist = "out"
@@ -379,12 +425,16 @@ class Ui_mainwindow(object):
             detectordist = "saxs"
         print(detectordist)
         exp = self.exposure.value()
+        # newpath = self.uniquify(os.path.join("/dls/i23/data", str((datetime.date.today().year)), str(self.input_visit.text()), "oneshot", (str(self.input_filename.text() + ".cbf")))
+        # tail = os.path.split(newpath)
+        # self.input_filename.setText(tail)
         self.runoneshot = oneshot(
             detectordist,
             self.input_visit.text(),
             self.input_filename.text(),
             str(exp),
         )
+        self.runoneshot.prepare_beamline()
         self.runoneshot.prepare_beamline()
         if self.tickbox_energy_scan.isChecked():
             self.d5values = []
@@ -410,11 +460,17 @@ class Ui_mainwindow(object):
         )
         self.energy_gap.display(gap)
 
-    def reset(self):
-        self.input_visit.setText("")
-        self.input_filename.setText("")
-        self.exposure.setValue(0.1)
-        self.detectordist_in.click()
+    def update(self):
+        self.blx = str(self.set_gisaxs_x.text())
+        self.bly = str(self.set_gisaxs_y.text())
+        ca.caput(pv.senv_blx, self.blx)
+        ca.caput(pv.senv_bly, self.bly)
+        
+    def updateValues(self):
+        self.blx_rbv = str(ca.caget(pv.senv_blx_rbv))
+        self.gisaxs_bs_x_rbv.setText(self.blx_rbv)
+        self.bly_rbv = str(ca.caget(pv.senv_bly_rbv))
+        self.gisaxs_bs_y_rbv.setText(self.bly_rbv)
 
     def exit(self):
         try:

@@ -2,3 +2,6 @@ __pycache__/pv.cpython-36.pyc
 *.csv
 *.json
 *.pyc
+tk
+time
+sys

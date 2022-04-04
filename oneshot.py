@@ -9,7 +9,7 @@ from control import ca
 class oneshot:
     def __init__(self, detector_position, visit, file_name, exposure_time):
         self.data_path = str(
-            os.path.join("/ramdisk", "2021", str(visit), "screening/oneshot/")
+            os.path.join("/ramdisk", str((datetime.date.today().year)), str(visit), "screening", "oneshot", "MM-MCLTPO")
         )
         self.data_path_st = self.data_path
         self.file_name = file_name
@@ -33,24 +33,18 @@ class oneshot:
             time.sleep(0.2)
         # shutter
         ca.caput(pv.shutter_ctrl1, "Auto")
-        print("Shutter done")
+        time.sleep(1)
+        ca.caput(pv.shutter_ctrl1, "Auto")
+        print("Shutter ready")
         # zebra
         ca.caput(pv.zebra_pc_arm_sel, "Soft")
         ca.caput(pv.zebra_pc_gate_sel, "Time")
         ca.caput(pv.zebra_pc_pulse_sel, "External")
         ca.caput(pv.zebra_pc_gate_start, 0)
         ca.caput(pv.zebra_pc_gate_wid, (self.aquisition_period * 1000))
-        print("Zebra done")
-        # senv
-        ca.caput(pv.senv_mp_select, "Kappa Safe")
-        time.sleep(0.2)
-        print("Moving backlight out...")
-        while ca.caget(pv.senv_mp_inpos) != "1":
-            time.sleep(0.2)
+        time.sleep(1)
+        print("Zebra ready")
         # pilatus
-        ca.caput(pv.pilatus_acquire, 1)
-        time.sleep(0.2)
-        ca.caput(pv.pilatus_acquire, 1)
         ca.caput(pv.pilatus_acquire_time, str(self.exposure_time))
         ca.caput(pv.pilatus_acquire_period, str(self.aquisition_period))
         ca.caput(pv.pilatus_image_mode, "Single")
@@ -59,16 +53,15 @@ class oneshot:
         ca.caputstring(pv.pilatus_file_path, str(self.data_path))
         ca.caputstring(pv.pilatus_file_name, str(self.file_name))
         ca.caput(pv.pilatus_file_number, 1)
-        ca.caputstring(pv.pilatus_file_template, "%s%s%3d.cbf")
-        print("Pilatus done")
+        ca.caputstring(pv.pilatus_file_template, "%s%s%05d.cbf")
+        print("Pilatus ready")
 
     def collect(self):
-        print("collecting")
+        print("Collecting")
         ca.caput(pv.pilatus_acquire, 1)
-        time.sleep(0.2)
-        ca.caput(pv.pilatus_acquire, 1)
+        time.sleep(3)
         ca.caput(pv.zebra_pc_arm, 1)
-        time.sleep(0.2)
+        time.sleep(4)
         while str(ca.caget(pv.shutter_status)) != "Close":
             time.sleep(0.2)
         print("Finished")
@@ -105,6 +98,7 @@ class oneshot:
             d5 += d5_read
         d5 = d5 / 10
         self.d5values.append(d5)
+        
 
     def returntonormal(self):
         print(
@@ -123,7 +117,7 @@ class oneshot:
 
 if __name__ == "__main__":
     print("I23 OneShot")
-    # run = oneshot("out", "cm28128-4", "testing", 1)
-    # run.prepare_beamline()
-    # run.collect()
-    # run.returntonormal()
+    run = oneshot("out", "cm31108-1", "testing", 1)
+    run.prepare_beamline()
+    run.collect()
+    #run.returntonormal()
